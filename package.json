@@ -1,0 +1,35 @@
+{
+  "name": "java-utils",
+  "version": "1.0.0",
+  "description": "Project for reading java related artifacts",
+  "main": "index.js",
+  "scripts": {
+    "test": "mocha src/**/*.test.js",
+  "test:watch": "mocha src/**/*.test.js -w"
+},
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/singletoncoding/java-utils.git"
+  },
+  "keywords": [
+    "java",
+    "mvn",
+    "pom",
+    "scanner",
+    "manifest",
+    "osgi"
+  ],
+  "author": "Dustin Singleton",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/singletoncoding/java-utils/issues"
+  },
+  "homepage": "https://github.com/singletoncoding/java-utils#readme",
+  "dependencies": {
+    "axios": "^0.18.0",
+    "xml2js": "^0.4.19"
+  },
+  "devDependencies": {
+    "mocha": "^5.1.1"
+  }
+}
