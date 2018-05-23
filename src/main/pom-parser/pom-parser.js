@@ -11,8 +11,8 @@ const getCoordinatesFromNode = (node) => {
     groupId,
     artifactId,
     version
-  }
-}
+  };
+};
 
 const readDependenciesFromProject = (project) => {
   if (!project.dependencies || !project.dependencies[0] || !project.dependencies[0].dependency) {
@@ -30,23 +30,15 @@ const readDependenciesFromProject = (project) => {
 };
 
 const buildJSONStructure = (project) => {
-  const groupId = project.groupId ? project.groupId[0] : '';
-  const artifactId = project.artifactId ? project.artifactId[0] : '';
-  const version = project.version ? project.version[0] : '';
-
-  const dependencies = readDependenciesFromProject(project);
-
-  if (debug) {
-    return {
-      dependencies: project.dependencies
-    }
+  let parentCoordinates = undefined;
+  if (project.parent && project.parent[0]) {
+    parentCoordinates = getCoordinatesFromNode(project.parent[0]);
   }
 
   return {
-    groupId,
-    artifactId,
-    version,
-    dependencies
+    ...getCoordinatesFromNode(project),
+    parent: parentCoordinates,
+    dependencies: readDependenciesFromProject(project)
   };
 };
 
