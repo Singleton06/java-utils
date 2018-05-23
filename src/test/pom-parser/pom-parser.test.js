@@ -52,5 +52,25 @@ describe('POMParser', () => {
           assert(pomContent.dependencies.length === 0);
         });
     });
+
+    it('parent-pom specified', () => {
+      const rawContent = readFile('parent-pom.xml');
+
+      return pomParser.parsePOMFromString(rawContent)
+        .then((pomContent) => {
+          assert.equal(pomContent.parent.groupId, 'a');
+          assert.equal(pomContent.parent.artifactId, 'b');
+          assert.equal(pomContent.parent.version, '1.0.0');
+        });
+    });
+
+    it('parent-pom specified', () => {
+      const rawContent = readFile('no-parent-pom.xml');
+
+      return pomParser.parsePOMFromString(rawContent)
+        .then((pomContent) => {
+          assert.equal(pomContent.parent, undefined);
+        });
+    });
   });
 });
