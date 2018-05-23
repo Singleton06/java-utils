@@ -18,5 +18,39 @@ describe('POMParser', () => {
           assert.equal(pomContent.version, '1.0.0');
         });
     });
+
+    it('pom with dependencies specified', () => {
+      const rawContent = readFile('dependency-file.xml');
+
+      return pomParser.parsePOMFromString(rawContent)
+        .then((pomContent) => {
+          const compileScopeDependency = pomContent.dependencies[0];
+          assert.equal(compileScopeDependency.groupId, 'a');
+          assert.equal(compileScopeDependency.artifactId, 'compileScope');
+          assert.equal(compileScopeDependency.version, '2.0.0');
+          assert.equal(compileScopeDependency.scope, 'compile');
+
+          const noScopeDependency = pomContent.dependencies[1];
+          assert.equal(noScopeDependency.groupId, 'a');
+          assert.equal(noScopeDependency.artifactId, 'noScope');
+          assert.equal(noScopeDependency.version, '2.0.0');
+          assert.equal(noScopeDependency.scope, undefined);
+
+          const testScopeDependency = pomContent.dependencies[2];
+          assert.equal(testScopeDependency.groupId, 'a');
+          assert.equal(testScopeDependency.artifactId, 'testScope');
+          assert.equal(testScopeDependency.version, '2.0.0');
+          assert.equal(testScopeDependency.scope, 'test');
+        });
+    });
+
+    it('no dependencies specified', () => {
+      const rawContent = readFile('no-dependencies.xml');
+
+      return pomParser.parsePOMFromString(rawContent)
+        .then((pomContent) => {
+          assert(pomContent.dependencies.length === 0);
+        });
+    });
   });
 });
