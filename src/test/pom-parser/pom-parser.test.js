@@ -64,7 +64,7 @@ describe('POMParser', () => {
         });
     });
 
-    it('parent-pom specified', () => {
+    it('no parent-pom specified', () => {
       const rawContent = readFile('no-parent-pom.xml');
 
       return pomParser.parsePOMFromString(rawContent)
