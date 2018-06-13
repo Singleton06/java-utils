@@ -64,6 +64,38 @@ describe('POMParser', () => {
         });
     });
 
+    it('repo-required', () => {
+      const rawContent = readFile('repo-required.xml');
+
+      return pomParser.parsePOMFromString(rawContent)
+        .then((pomContent) => {
+          const repository = pomContent.repositories[0];
+          assert.equal(repository.id, 'The Beatles');
+          assert.equal(repository.url, 'https://en.wikipedia.org/wiki/The_Beatles');
+          assert.equal(repository.name, undefined);
+          assert.equal(repository.layout, 'Pre-Yoko');
+
+          assert.equal(repository.releases.enabled, 'false');
+          assert.equal(repository.releases.updatePolicy, 'always');
+          assert.equal(repository.releases.checksumPolicy, 'warn');
+
+          assert.equal(repository.snapshots.enabled, 'true');
+          assert.equal(repository.snapshots.checksumPolicy, 'fail');
+          assert.equal(repository.snapshots.updatePolicy, 'never');
+        });
+
+    });
+
+    it('no repo specified', () => {
+      const rawContent = readFile('simple.xml');
+
+      return pomParser.parsePOMFromString(rawContent)
+        .then((pomContent) => {
+          assert(pomContent.repositories.length === 0);
+        });
+
+    });
+
     it('no parent-pom specified', () => {
       const rawContent = readFile('no-parent-pom.xml');
 

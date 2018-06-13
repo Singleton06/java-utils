@@ -12,6 +12,53 @@ const getCoordinatesFromNode = (node) => {
   };
 };
 
+const getStatusFromRepo = (release) => {
+  const enabled = release.enabled ? release.enabled[0] : undefined;
+  const updatePolicy = release.updatePolicy ? release.updatePolicy[0] : undefined;
+  const checksumPolicy = release.checksumPolicy ? release.checksumPolicy[0] : undefined;
+
+  return {
+    enabled,
+    updatePolicy,
+    checksumPolicy
+  };
+
+};
+
+const readRepositoriesFromProject = (project) => {
+  if (!project.repositories || !project.repositories[0] || !project.repositories[0].repository) {
+    return [];
+  }
+
+  return project.repositories[0].repository.map((repository) => {
+    //required repository aspects
+    const id = repository.id ? repository.id[0] : undefined;
+    const url = repository.url ? repository.url[0] : undefined;
+    //additional repository properties 
+    const name = repository.name ? repository.name[0] : undefined;
+    const layout = repository.layout ? repository.layout[0] : undefined;
+
+    let releases = undefined;
+    let snapshots = undefined;
+
+    if(repository.releases && repository.releases[0]){
+      releases = getStatusFromRepo(repository.releases[0]);
+    }
+    if(repository.snapshots && repository.snapshots[0]){
+      snapshots = getStatusFromRepo(repository.snapshots[0]);
+    }
+
+    return{
+      id,
+      url,
+      name,
+      layout,
+      releases,
+      snapshots
+    };
+  });
+};
+
 const readDependenciesFromProject = (project) => {
   if (!project.dependencies || !project.dependencies[0] || !project.dependencies[0].dependency) {
     return [];
@@ -36,7 +83,8 @@ const buildJSONStructure = (project) => {
   return {
     ...getCoordinatesFromNode(project),
     parent: parentCoordinates,
-    dependencies: readDependenciesFromProject(project)
+    dependencies: readDependenciesFromProject(project),
+    repositories: readRepositoriesFromProject(project)
   };
 };
 
