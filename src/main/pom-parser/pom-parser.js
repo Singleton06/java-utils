@@ -1,7 +1,5 @@
 const xml2js = require('xml2js');
 
-const debug = false;
-
 const getCoordinatesFromNode = (node) => {
   const groupId = node.groupId ? node.groupId[0] : '';
   const artifactId = node.artifactId ? node.artifactId[0] : '';
