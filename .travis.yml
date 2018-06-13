@@ -9,3 +9,4 @@ deploy:
   on:
     tags: true
     repo: singletoncoding/java-utils
+after_success: npm run coverage
