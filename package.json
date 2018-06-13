@@ -1,6 +1,6 @@
 {
   "name": "java-utils",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "description": "Project for reading java related artifacts",
   "main": "index.js",
   "scripts": {
