@@ -1,9 +1,10 @@
 const xml2js = require('xml2js');
 
 const getCoordinatesFromNode = (node) => {
+  //parent checks work on the same level as the node so it is not possible for parents or dependencies 
   const groupId = node.groupId ? node.groupId[0] : (node.parent ? getCoordinatesFromNode(node.parent[0]).groupId : undefined );
   const artifactId = node.artifactId ? node.artifactId[0] : undefined;
-  const version = node.version ? node.version[0] : undefined;
+  const version = node.version ? node.version[0] : (node.parent ? getCoordinatesFromNode(node.parent[0]).version : undefined );
 
   return {
     groupId,
@@ -12,7 +13,7 @@ const getCoordinatesFromNode = (node) => {
   };
 };
 
-const getStatusFromRepo = (release) => {
+const getRepositoryPolicy = (release) => {
   const enabled = release.enabled ? release.enabled[0] : undefined;
   const updatePolicy = release.updatePolicy ? release.updatePolicy[0] : undefined;
   const checksumPolicy = release.checksumPolicy ? release.checksumPolicy[0] : undefined;
@@ -22,7 +23,6 @@ const getStatusFromRepo = (release) => {
     updatePolicy,
     checksumPolicy
   };
-
 };
 
 const readRepositoriesFromProject = (project) => {
@@ -40,10 +40,10 @@ const readRepositoriesFromProject = (project) => {
     let snapshots = undefined;
 
     if(repository.releases && repository.releases[0]){
-      releases = getStatusFromRepo(repository.releases[0]);
+      releases = getRepositoryPolicy(repository.releases[0]);
     }
     if(repository.snapshots && repository.snapshots[0]){
-      snapshots = getStatusFromRepo(repository.snapshots[0]);
+      snapshots = getRepositoryPolicy(repository.snapshots[0]);
     }
 
     return{
