@@ -60,3 +60,6 @@ typings/
 # intellij
 .idea
 
+# vs code
+.vscode
+
