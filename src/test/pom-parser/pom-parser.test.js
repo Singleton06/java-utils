@@ -19,6 +19,17 @@ describe('POMParser', () => {
         });
     });
 
+    it('simple pom without groupId, artifactId, and version', () => {
+      const rawContent = readFile('no-general-info.xml');
+
+      return pomParser.parsePOMFromString(rawContent)
+        .then((pomContent) => {
+          assert.equal(pomContent.groupId, undefined);
+          assert.equal(pomContent.artifactId, undefined);
+          assert.equal(pomContent.version, undefined);
+        });
+    });
+
     it('pom with dependencies specified', () => {
       const rawContent = readFile('dependency-file.xml');
 
@@ -44,6 +55,19 @@ describe('POMParser', () => {
         });
     });
 
+    it('pom with a dependency without a version', () => {
+      const rawContent = readFile('dependency-without-version.xml');
+
+      return pomParser.parsePOMFromString(rawContent)
+        .then((pomContent) => {
+          const dependency = pomContent.dependencies[0];
+          assert.equal(dependency.groupId, 'Jim');
+          assert.equal(dependency.artifactId, 'Pam');
+          assert.equal(dependency.version, undefined);
+          assert.equal(dependency.scope, 'Dwight');
+        });
+    });
+
     it('no dependencies specified', () => {
       const rawContent = readFile('no-dependencies.xml');
 
@@ -64,6 +88,26 @@ describe('POMParser', () => {
         });
     });
 
+    it('no parent-pom specified', () => {
+      const rawContent = readFile('no-parent-pom.xml');
+
+      return pomParser.parsePOMFromString(rawContent)
+        .then((pomContent) => {
+          assert.equal(pomContent.parent, undefined);
+        });
+    });
+  });
+
+  it('Child group id inheritance', () => {
+    const rawContent = readFile('child-group-id-inheritance.xml');
+
+    return pomParser.parsePOMFromString(rawContent)
+      .then((pomContent) => {
+          assert.equal(pomContent.groupId, 'a');
+      });
+  });
+
+  describe('TestRepoValues-parsePomFromString', () => {
     it('repo-required', () => {
       const rawContent = readFile('repo-required.xml');
 
@@ -83,11 +127,10 @@ describe('POMParser', () => {
           assert.equal(repository.snapshots.checksumPolicy, 'fail');
           assert.equal(repository.snapshots.updatePolicy, 'never');
         });
-
     });
 
     it('no repo specified', () => {
-      const rawContent = readFile('simple.xml');
+      const rawContent = readFile('no-repo.xml');
 
       return pomParser.parsePOMFromString(rawContent)
         .then((pomContent) => {
@@ -95,14 +138,70 @@ describe('POMParser', () => {
         });
 
     });
-
-    it('no parent-pom specified', () => {
-      const rawContent = readFile('no-parent-pom.xml');
+    
+    it('Repo id/url', () => { 
+      const rawContent = readFile('repo-id-url.xml');
 
       return pomParser.parsePOMFromString(rawContent)
         .then((pomContent) => {
-          assert.equal(pomContent.parent, undefined);
+          repository = pomContent.repositories[0];
+          assert.equal(repository.id, 'Trader Joes');
+          assert.equal(repository.url, 'https://www.traderjoes.com/');
+
+          repository = pomContent.repositories[1];
+          assert.equal(repository.id, undefined);
+          assert.equal(repository.url, 'https://www.walmart.com/');
+
+          repository = pomContent.repositories[2];
+          assert.equal(repository.id, 'Target');
+          assert.equal(repository.url, undefined);
+
         });
     });
+
+    it('Repo name/layout', () => { 
+      const rawContent = readFile('repo-name-layout.xml');
+
+      return pomParser.parsePOMFromString(rawContent)
+        .then((pomContent) => {
+          repository = pomContent.repositories[0];
+          assert.equal(repository.name, 'Elizabeth Bennet');
+          assert.equal(repository.layout, 'Regency');
+
+          repository = pomContent.repositories[1];
+          assert.equal(repository.name, 'Mr. Darcy');
+          assert.equal(repository.layout, undefined);
+
+          repository = pomContent.repositories[2];
+          assert.equal(repository.name, undefined);
+          assert.equal(repository.layout, 'Jane Austen');
+
+        });
+      });
+
+      it('Repo releases/snapshots', () => { 
+        const rawContent = readFile('repo-releases-snapshots.xml');
+  
+        return pomParser.parsePOMFromString(rawContent)
+          .then((pomContent) => {
+            repository = pomContent.repositories[0];
+            assert.equal(repository.releases.enabled, 'up');
+            assert.equal(repository.releases.updatePolicy, 'Never');
+            assert.equal(repository.releases.checksumPolicy, 'gunna');
+            assert.equal(repository.snapshots.enabled, 'let');
+            assert.equal(repository.snapshots.updatePolicy, 'you');
+            assert.equal(repository.snapshots.checksumPolicy, 'down');
+  
+            emptyRSrepository = pomContent.repositories[1];
+            assert.equal(emptyRSrepository.releases.enabled, undefined);
+            assert.equal(emptyRSrepository.releases.updatePolicy, undefined);
+            assert.equal(emptyRSrepository.releases.checksumPolicy, undefined);
+            assert.equal(emptyRSrepository.snapshots.enabled, undefined);
+            assert.equal(emptyRSrepository.snapshots.updatePolicy, undefined);
+            assert.equal(emptyRSrepository.snapshots.checksumPolicy, undefined);
+  
+          });
+        });
+
   });
 });

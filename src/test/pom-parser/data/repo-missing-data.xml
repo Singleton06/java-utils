@@ -1,0 +1,41 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>a</groupId>
+    <artifactId>b</artifactId>
+    <version>1.0.0</version>
+    <repositories>
+        <repository>
+            <id>The Beatles</id>
+            <url>https://en.wikipedia.org/wiki/The_Beatles</url>
+            <layout>Pre-Yoko</layout>
+            <releases>
+                <enabled>false</enabled>
+                <updatePolicy>always</updatePolicy>
+                <checksumPolicy>warn</checksumPolicy>
+            </releases>
+            <snapshots>
+                <enabled>true</enabled>
+                <updatePolicy>never</updatePolicy>
+                <checksumPolicy>fail</checksumPolicy>
+            </snapshots>
+        </repository>
+        <repository>
+            <id>Queen</id>
+            <url>https://en.wikipedia.org/wiki/Queen_(band)</url>
+            <name>Freddie Mercury</name>
+            <releases>
+                <updatePolicy>We will rock you</updatePolicy>
+                <checksumPolicy>Dont stop me now</checksumPolicy>
+            </releases>
+            <snapshots>
+                <enabled>I want to ride my bicycle</enabled>
+                <updatePolicy>You say John I say Wayne</updatePolicy>
+            </snapshots>
+        </repository>
+        <repository>
+            <layout>Kansas</layout>
+            <snapshots>
+            </snapshots>
+        </repository>
+    </repositories>
+</project>

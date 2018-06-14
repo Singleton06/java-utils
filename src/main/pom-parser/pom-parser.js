@@ -1,9 +1,9 @@
 const xml2js = require('xml2js');
 
 const getCoordinatesFromNode = (node) => {
-  const groupId = node.groupId ? node.groupId[0] : '';
-  const artifactId = node.artifactId ? node.artifactId[0] : '';
-  const version = node.version ? node.version[0] : '';
+  const groupId = node.groupId ? node.groupId[0] : (node.parent ? getCoordinatesFromNode(node.parent[0]).groupId : undefined );
+  const artifactId = node.artifactId ? node.artifactId[0] : undefined;
+  const version = node.version ? node.version[0] : undefined;
 
   return {
     groupId,
@@ -31,10 +31,8 @@ const readRepositoriesFromProject = (project) => {
   }
 
   return project.repositories[0].repository.map((repository) => {
-    //required repository aspects
     const id = repository.id ? repository.id[0] : undefined;
-    const url = repository.url ? repository.url[0] : undefined;
-    //additional repository properties 
+    const url = repository.url ? repository.url[0] : undefined; 
     const name = repository.name ? repository.name[0] : undefined;
     const layout = repository.layout ? repository.layout[0] : undefined;
 
