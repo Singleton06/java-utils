@@ -1,4 +1,6 @@
 const xml2js = require('xml2js');
+const axios = require('axios');
+const fs = require('fs');
 
 const getCoordinatesFromNode = (node) => {
   //parent checks work on the same level as the node so it is not possible for parents or dependencies 
@@ -36,8 +38,8 @@ const readRepositoriesFromProject = (project) => {
     const name = repository.name ? repository.name[0] : undefined;
     const layout = repository.layout ? repository.layout[0] : undefined;
 
-    let releases = undefined;
-    let snapshots = undefined;
+    let release = undefined;
+    let snapshot = undefined;
 
     if(repository.releases && repository.releases[0]){
       releases = getRepositoryPolicy(repository.releases[0]);
@@ -64,7 +66,7 @@ const readDependenciesFromProject = (project) => {
 
   return project.dependencies[0].dependency.map((dependency) => {
     const scope = dependency.scope ? dependency.scope[0] : undefined;
-    
+
     return {
       ...getCoordinatesFromNode(dependency),
       scope
@@ -72,18 +74,71 @@ const readDependenciesFromProject = (project) => {
   });
 };
 
-const buildJSONStructure = (project) => {
-  let parentCoordinates = undefined;
-  if (project.parent && project.parent[0]) {
-    parentCoordinates = getCoordinatesFromNode(project.parent[0]);
+const fetchParent = (project) => {
+  const emptyPromise = new Promise((resolve) => resolve(undefined));
+  result = emptyPromise;
+
+  if(!project.parent || !project.parent[0] || !project.repositories || !project.repositories[0] || !project.repositories[0].repository[0].url){
+    return emptyPromise;
   }
 
-  return {
-    ...getCoordinatesFromNode(project),
-    parent: parentCoordinates,
-    dependencies: readDependenciesFromProject(project),
-    repositories: readRepositoriesFromProject(project)
-  };
+    var baseRepo = readRepositoriesFromProject(project)[0].url;
+    var parentCoordinates = getCoordinatesFromNode(project.parent[0]);
+    parentGroupId = parentCoordinates.groupId.replace(/[.]/g, '/');
+  
+    return axios.get(`${baseRepo}/${parentGroupId}/${parentCoordinates.artifactId}/${parentCoordinates.version}/${parentCoordinates.artifactId}-${parentCoordinates.version}.pom`)
+      .then(function(response){
+        return parsePOMFromString(response.data);
+        })
+      .catch(function(error){
+        console.log(error);
+        console.log('Parent Pom not reached');
+        return emptyPromise; // :(
+        }); 
+
+};
+
+const optionConfigure = (resolveArtifact) => {
+  if (resolveArtifact == undefined){
+    return function option(project) {
+    var baseRepo = readRepositoriesFromProject(project)[0].url;
+    var parentCoordinates = getCoordinatesFromNode(project.parent[0]);
+    parentGroupId = parentCoordinates.groupId.replace(/[.]/g, '/');
+ 
+    return axios.get(`${baseRepo}/${parentGroupId}/${parentCoordinates.artifactId}/${parentCoordinates.version}/${parentCoordinates.artifactId}-${parentCoordinates.version}.pom`)
+      .then(function(response){
+        return parsePOMFromString(response.data);
+        })
+      .catch(function(error){
+        console.log(error);
+        console.log('Parent Pom not reached');
+        return emptyPromise; // :(
+        });
+      }
+    }
+    else {
+      console.log('Defined');
+      return resolveArtifact; 
+    }
+};
+
+const buildJSONStructure = (project) => {
+  let parentCoordinates = undefined;
+  const parentPOMPromise = fetchParent(project);
+  console.log('parentPOMPromise', parentPOMPromise);
+  if (project.parent && project.parent[0]) {
+    parentCoordinates = getCoordinatesFromNode(project.parent[0]); 
+  }
+
+  return parentPOMPromise.then(parentPOM => {
+    return {
+      ...getCoordinatesFromNode(project),
+      parent: parentCoordinates,
+      dependencies: readDependenciesFromProject(project),
+      repositories: readRepositoriesFromProject(project),
+      parentPom: parentPOM
+    }
+ });
 };
 
 const parsePOMFromString = (pomContents) => {

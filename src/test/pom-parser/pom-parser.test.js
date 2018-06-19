@@ -205,13 +205,13 @@ describe('POMParser', () => {
             assert.equal(repository.snapshots.updatePolicy, 'you');
             assert.equal(repository.snapshots.checksumPolicy, 'down');
   
-            emptyRSrepository = pomContent.repositories[1];
-            assert.equal(emptyRSrepository.releases.enabled, undefined);
-            assert.equal(emptyRSrepository.releases.updatePolicy, undefined);
-            assert.equal(emptyRSrepository.releases.checksumPolicy, undefined);
-            assert.equal(emptyRSrepository.snapshots.enabled, undefined);
-            assert.equal(emptyRSrepository.snapshots.updatePolicy, undefined);
-            assert.equal(emptyRSrepository.snapshots.checksumPolicy, undefined);
+            emptyRSRepository = pomContent.repositories[1];
+            assert.equal(emptyRSRepository.releases.enabled, undefined);
+            assert.equal(emptyRSRepository.releases.updatePolicy, undefined);
+            assert.equal(emptyRSRepository.releases.checksumPolicy, undefined);
+            assert.equal(emptyRSRepository.snapshots.enabled, undefined);
+            assert.equal(emptyRSRepository.snapshots.updatePolicy, undefined);
+            assert.equal(emptyRSRepository.snapshots.checksumPolicy, undefined);
         });
       });
     });
