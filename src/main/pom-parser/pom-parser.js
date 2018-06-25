@@ -125,8 +125,7 @@ const defaultFetch = (groupId, artifactId, version, repository) => {
 
   for (let i = 0; i < urls.length; i++) {
     thePromises.push(
-      axios
-        .get(urls[i])
+      axios.get(urls[i])
         .then(response => response.data)
         .catch(function(error) {
           if (error.response.status > 399 && error.response.status < 500)

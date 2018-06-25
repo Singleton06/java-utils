@@ -217,10 +217,7 @@ describe('POMParser', () => {
             version,
             repository
           ) {
-            contents = fs.readFileSync(
-              `C:/Users/BL057404/git/java-utils/src/test/pom-parser/data/${parentArtifactId}-fetch-pom.xml`,
-              { encoding: 'utf8' }
-            );
+            contents = readFile(`${parentArtifactId}-fetch-pom.xml`,{ encoding: 'utf8' });
             return contents;
           })
           .then(pomContent => {
