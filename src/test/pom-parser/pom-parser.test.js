@@ -1,6 +1,8 @@
 const assert = require('assert');
 const fs = require('fs');
 const pomParser = require('../../main/pom-parser/pom-parser');
+const http = require('http');
+const mock = require('mockserver');
 
 const readFile = fileName => {
   return fs.readFileSync(`./src/test/pom-parser/data/${fileName}`, {
@@ -231,17 +233,19 @@ describe('POMParser', () => {
           });
       });
 
-      it('find parent pom using the default fetch, * uses the internet *', () => {
+      it('find parent pom using the default fetch with a mock server', () => {
         const rawContent = readFile('default-fetch-parent.xml');
+        var server = http.createServer(mock('./src/test/pom-parser/mocks')).listen(3001);
 
         return pomParser.parsePOMFromString(rawContent).then(pomContent => {
           parentPOM = pomContent.parentPom;
-          assert.equal(parentPOM.groupId, 'com.cerner.revenuecycle.parent');
-          assert.equal(parentPOM.artifactId, 'scheduling-base-pom');
+          assert.equal(parentPOM.groupId, 'a');
+          assert.equal(parentPOM.artifactId, 'b');
           assert.equal(parentPOM.version, '2.0.0');
           assert.equal(parentPOM.parent, undefined);
           assert.equal(parentPOM.parentPom, undefined);
-          assert(parentPOM.dependencies.length == 0);
+          assert(parentPOM.dependencies.length == 0); 
+          server.close();
         });
       });
     });

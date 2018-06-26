@@ -38,8 +38,8 @@ const readRepositoriesFromProject = project => {
     const name = repository.name ? repository.name[0] : undefined;
     const layout = repository.layout ? repository.layout[0] : undefined;
 
-    let release = undefined;
-    let snapshot = undefined;
+    let releases = undefined;
+    let snapshots = undefined;
 
     if (repository.releases && repository.releases[0]) {
       releases = getRepositoryPolicy(repository.releases[0]);
@@ -106,7 +106,6 @@ const fetchParent = (project, findParent) => {
       return parsePOMFromString(response);
     })
     .catch(function(error) {
-      console.log(error);
       return emptyPromise; //so many emotions
     });
 };

@@ -1,27 +1,18 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 <modelVersion>4.0.0</modelVersion>
     <parent>
-        <groupId>com.cerner.revenuecycle.parent</groupId>
-        <artifactId>scheduling-base-pom</artifactId>
-        <version>2.0.0</version>
+        <groupId>group</groupId>
+        <artifactId>artifact</artifactId>
+        <version>version</version>
     </parent>
-<groupId>com.cerner.revenuecycle.parent</groupId>
-<artifactId>scheduling-base-osgi-pom</artifactId>
-<version>2.0.0</version>
+<groupId>a</groupId>
+<artifactId>b</artifactId>
+<version>c</version>
 <packaging>pom</packaging>
-<url>${dist.site.url}</url>
-<properties>
-    <cerner.eclipse.testing.plugin.version>2.3</cerner.eclipse.testing.plugin.version>
-    <cerner.osgi.plugin.version>3.1.2</cerner.osgi.plugin.version>
-    <github.org>scheduling</github.org>
-    <maven.clover.skip>false</maven.clover.skip>
-    <jacoco.skip>true</jacoco.skip>
-</properties> 
+<url>${dist.site.url}</url> 
 <repositories>
     <repository>
-        <id>cerner-release-internal</id>
-        <name>Cerner Release Internal Artifact Repository</name>
-        <url>http://repo.release.cerner.corp/internal/repo</url>
+        <url>http://localhost:3001</url>
         <releases>
             <enabled>true</enabled>
             <updatePolicy>never</updatePolicy>
@@ -32,9 +23,7 @@
         </snapshots>
     </repository>
     <repository>
-        <id>cerner-release-main</id>
-        <name>Cerner Release Main Artifact Repository</name>
-        <url>http://repo.release.cerner.corp/main/repo</url>
+        <url>http://localhost:3001/hello</url>
         <releases>
             <enabled>true</enabled>
             <updatePolicy>never</updatePolicy>
@@ -42,132 +31,7 @@
         </releases>
         <snapshots>
             <enabled>false</enabled>
-        </snapshots>
-    </repository>
-    <repository>
-        <id>cerner-release-external</id>
-        <name>Cerner Release External Artifact Repository</name>
-        <url>http://repo.release.cerner.corp/external/repo</url>
-        <releases>
-            <enabled>true</enabled>
-            <updatePolicy>never</updatePolicy>
-            <checksumPolicy>fail</checksumPolicy>
-        </releases>
-        <snapshots>
-            <enabled>false</enabled>
-        </snapshots>
-    </repository>
-    <repository>
-        <id>ccs-snapshot</id>
-        <name>CCS Snapshot Artifact Repository</name>
-        <url>http://repo.ccs.cerner.corp/main/snapshot-repo</url>
-        <releases>
-            <enabled>false</enabled>
-        </releases>
-        <snapshots>
-            <enabled>true</enabled>
-            <updatePolicy>always</updatePolicy>
-            <checksumPolicy>fail</checksumPolicy>
-        </snapshots>
-    </repository>
-    <repository>
-        <id>codehaus-mule-repo</id>
-        <name>codehaus-mule-repo</name>
-        <url>https://repository-master.mulesoft.org/nexus/content/groups/public/</url>
-        <layout>default</layout>
-        <releases>
-            <enabled>true</enabled>
-            <updatePolicy>never</updatePolicy>
-            </releases>
-        <snapshots>
-            <enabled>false</enabled>
-            <updatePolicy>never</updatePolicy>
         </snapshots>
     </repository>
     </repositories>
-    <build>
-        <pluginManagement>
-            <plugins>
-                <plugin>
-                    <groupId>com.cerner.engineering</groupId>
-                    <artifactId>cerner-eclipse-testing-plugin</artifactId>
-                    <version>${cerner.eclipse.testing.plugin.version}</version>
-                    <configuration>
-                        <excludes>
-                            <exclude>**/snippets/**</exclude>
-                            <exclude>**/manualtests/**</exclude>
-                        </excludes>
-                    </configuration>
-                </plugin>
-                <plugin>
-                    <groupId>com.cerner.engineering</groupId>
-                    <artifactId>cerner-osgi-plugin</artifactId>
-                    <version>${cerner.osgi.plugin.version}</version>
-                    <configuration>
-                        <importUnresolvedPackages>false</importUnresolvedPackages>
-                        <headers>
-                            <header>
-                                <name>Bundle-SymbolicName</name>
-                                <values>
-                                    <value>
-                                        <name>${project.artifactId}</name>
-                                        <directives>
-                                            <singleton>true</singleton>
-                                        </directives>
-                                    </value>
-                                </values>
-                            </header>
-                            <header>
-                                <name>Eclipse-LazyStart</name>
-                                <values>
-                                    <value>
-                                        <name>true</name>
-                                    </value>
-                                </values>
-                            </header>
-                        </headers>
-                    </configuration>
-                    <executions>
-                        <execution>
-                            <goals>
-                                <goal>generate-osgi-manifest</goal>
-                                <goal>generate-test-osgi-manifest</goal>
-                            </goals>
-                        </execution>
-                    </executions>
-                </plugin>
-                <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-jar-plugin</artifactId>
-                    <configuration>
-                        <archive>
-                            <index>true</index>
-                            <manifest>
-                                <addDefaultImplementationEntries>false</addDefaultImplementationEntries>
-                            </manifest>
-                            <manifestFile>${project.build.outputDirectory}/META-INF/MANIFEST.MF</manifestFile>
-                            <manifestEntries>
-                                <Implementation-Build-Time>${buildTimestamp}</Implementation-Build-Time>
-                                <Implementation-Build>${buildNumber}</Implementation-Build>
-                            </manifestEntries>
-                        </archive>
-                    </configuration>
-                </plugin>
-            </plugins>
-        </pluginManagement>
-        <plugins>
-            <plugin>
-                <groupId>com.cerner.engineering</groupId>
-                <artifactId>cerner-osgi-plugin</artifactId>
-            </plugin>
-        </plugins>
-    </build>
-    <reporting>
-        <plugins>
-            <plugin>
-                <groupId>com.cerner.engineering</groupId>
-                <artifactId>cerner-osgi-plugin</artifactId>
-            </plugin>
-        </plugins>
-    </reporting>
 </project>
