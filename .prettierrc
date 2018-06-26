@@ -1,0 +1,13 @@
+{
+  "overrides": [
+    {
+      "files": ["*.js"],
+      "singleQuote": true,
+      "printWidth": 120
+    },
+    {
+      "files": ".prettierrc",
+      "options": { "parser": "json" }
+    }
+  ]
+}
