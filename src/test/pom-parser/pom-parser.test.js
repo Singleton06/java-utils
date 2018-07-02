@@ -154,7 +154,7 @@ describe('POMParser', () => {
         const rawContent = readFile('repo-id-url.xml');
 
         return pomParser.parsePOMFromString(rawContent).then(pomContent => {
-          repository = pomContent.repositories[0];
+          let repository = pomContent.repositories[0];
           assert.equal(repository.id, 'Trader Joes');
           assert.equal(repository.url, 'https://www.traderjoes.com/');
 
@@ -172,7 +172,7 @@ describe('POMParser', () => {
         const rawContent = readFile('repo-name-layout.xml');
 
         return pomParser.parsePOMFromString(rawContent).then(pomContent => {
-          repository = pomContent.repositories[0];
+          let repository = pomContent.repositories[0];
           assert.equal(repository.name, 'Elizabeth Bennet');
           assert.equal(repository.layout, 'Regency');
 
@@ -190,7 +190,7 @@ describe('POMParser', () => {
         const rawContent = readFile('repo-releases-snapshots.xml');
 
         return pomParser.parsePOMFromString(rawContent).then(pomContent => {
-          repository = pomContent.repositories[0];
+          const repository = pomContent.repositories[0];
           assert.equal(repository.releases.enabled, 'up');
           assert.equal(repository.releases.updatePolicy, 'Never');
           assert.equal(repository.releases.checksumPolicy, 'gunna');
@@ -208,43 +208,138 @@ describe('POMParser', () => {
         });
       });
     });
+
     describe('Recursive Parent Pom Fetching', () => {
       it('find parent pom using a user method', () => {
         const rawContent = readFile('grandchild-fetch-pom.xml');
+        const configuration = {
+          findParent: function(information) {
+            return new Promise(resolve => 
+              resolve(readFile(`${information.artifactCoordinates.artifactId}-fetch-pom.xml`))
+            );
+          } 
+        }
 
         return pomParser
-          .parsePOMFromString(rawContent, function fetchParent(
-            parentGroupId,
-            parentArtifactId,
-            version,
-            repository
-          ) {
-            contents = readFile(`${parentArtifactId}-fetch-pom.xml`,{ encoding: 'utf8' });
-            return contents;
-          })
+          .parsePOMFromString(rawContent, configuration)
           .then(pomContent => {
-            parentPOM = pomContent.parentPom;
+            const parentPOM = pomContent.parentPom;
             assert.equal(parentPOM.groupId, 'child of the overlord');
             assert.equal(parentPOM.artifactId, 'child');
             assert.equal(parentPOM.version, '3.0.0');
 
-            assert.equal(parentPOM.parentPom.groupId, 'I am the overlord');
-            assert.equal(parentPOM.parentPom.parentPom, undefined);
+            assert.equal(parentPOM.parent.groupId, 'a');
+            assert.equal(parentPOM.parent.artifactId, 'parent');
+            assert.equal(parentPOM.parent.version, '1.0.0');
+
+            const grandparentPOM = parentPOM.parentPom;
+            assert.equal(grandparentPOM.groupId, 'a');
+            assert.equal(grandparentPOM.artifactId, 'parent');
+            assert.equal(grandparentPOM.version, '1.0.0');
+            assert.equal(grandparentPOM.parentPom, undefined);
+          });
+      });
+
+      it('check parentPom holds correct values after user method', () => {
+        const rawContent = readFile('grandchild-fetch-pom.xml');
+        const configuration = {
+          findParent: function(information) {
+            return new Promise(resolve => 
+              resolve(readFile(`${information.artifactCoordinates.artifactId}-fetch-pom.xml`))
+            );
+          } 
+        }
+
+        return pomParser
+          .parsePOMFromString(rawContent, configuration)
+          .then(pomContent => {
+            const parentPOM = pomContent.parentPom;
+            assert.equal(parentPOM.groupId, 'child of the overlord');
+            assert.equal(parentPOM.artifactId, 'child');
+            assert.equal(parentPOM.version, '3.0.0');
+
+            assert.equal(parentPOM.parent.groupId, 'a');
+            assert.equal(parentPOM.parent.artifactId, 'parent');
+            assert.equal(parentPOM.parent.version, '1.0.0');
+
+            assert.equal(parentPOM.repositories[0].id, 'The Beatles');
+            assert.equal(parentPOM.repositories[0].url, 'https://en.wikipedia.org/wiki/The_Beatles');
+            assert.equal(parentPOM.repositories[0].layout, 'Pre-Yoko');
+            assert.equal(parentPOM.repositories[0].releases.enabled, 'false');
+            assert.equal(parentPOM.repositories[0].releases.updatePolicy, 'always');
+            assert.equal(parentPOM.repositories[0].releases.checksumPolicy, 'warn');
+            assert.equal(parentPOM.repositories[0].snapshots.enabled, 'true');
+            assert.equal(parentPOM.repositories[0].snapshots.updatePolicy, 'never');
+            assert.equal(parentPOM.repositories[0].snapshots.checksumPolicy, 'fail');
+
+            const grandparentPOM = parentPOM.parentPom;
+            assert.equal(grandparentPOM.groupId, 'a');
+            assert.equal(grandparentPOM.artifactId, 'parent');
+            assert.equal(grandparentPOM.version, '1.0.0');
+            assert.equal(grandparentPOM.parentPom, undefined);
+            assert(grandparentPOM.repositories.length === 0);
           });
       });
 
       it('find parent pom using the default fetch with a mock server', () => {
         const rawContent = readFile('default-fetch-parent.xml');
-        var server = http.createServer(mock('./src/test/pom-parser/mocks')).listen(3001);
+        const server = http.createServer(mock('./src/test/pom-parser/mocks')).listen(3001);
 
-        return pomParser.parsePOMFromString(rawContent).then(pomContent => {
-          parentPOM = pomContent.parentPom;
+        return pomParser
+        .parsePOMFromString(rawContent)
+        .then(pomContent => {
+          const parentPOM = pomContent.parentPom;
           assert.equal(parentPOM.groupId, 'a');
           assert.equal(parentPOM.artifactId, 'b');
           assert.equal(parentPOM.version, '2.0.0');
           assert.equal(parentPOM.parent, undefined);
           assert.equal(parentPOM.parentPom, undefined);
-          assert(parentPOM.dependencies.length == 0); 
+          server.close();
+        });
+      });
+
+      it('check parentPom values after the default fetch with a mock server', () => {
+        const rawContent = readFile('default-fetch-parent.xml');
+        const server = http.createServer(mock('./src/test/pom-parser/mocks')).listen(3001);
+
+        return pomParser
+        .parsePOMFromString(rawContent)
+        .then(pomContent => {
+          const parentPOM = pomContent.parentPom;
+          assert(parentPOM.repositories.length === 0);
+          
+          const compileScopeDependency = parentPOM.dependencies[0];
+          assert.equal(compileScopeDependency.groupId, 'a');
+          assert.equal(compileScopeDependency.artifactId, 'compileScope');
+          assert.equal(compileScopeDependency.version, '2.0.0');
+          assert.equal(compileScopeDependency.scope, 'compile');
+
+          const noScopeDependency = parentPOM.dependencies[1];
+          assert.equal(noScopeDependency.groupId, 'b');
+          assert.equal(noScopeDependency.artifactId, 'noScope');
+          assert.equal(noScopeDependency.version, '2.0.0');
+          assert.equal(noScopeDependency.scope, undefined);
+
+          const testScopeDependency = parentPOM.dependencies[2];
+          assert.equal(testScopeDependency.groupId, 'c');
+          assert.equal(testScopeDependency.artifactId, 'testScope');
+          assert.equal(testScopeDependency.version, '2.0.0');
+          assert.equal(testScopeDependency.scope, 'test');
+
+          server.close();
+        });
+      });
+
+      it('check an error is thrown when all repo urls are invalid in fetchParent', () => {
+        const rawContent = readFile('invalid-repo-urls.xml');
+        const server = http.createServer(mock('./src/test/pom-parser/mocks')).listen(3001);
+
+        return pomParser
+        .parsePOMFromString(rawContent)
+        .then(pomContent => {
+          assert.throws(() => {
+            throw new error;
+          });
           server.close();
         });
       });

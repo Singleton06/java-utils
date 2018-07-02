@@ -1,6 +1,6 @@
 const xml2js = require("xml2js");
 const axios = require("axios");
-const fs = require("fs");
+const emptyPromise = new Promise(resolve => resolve(undefined));
 
 const getCoordinatesFromNode = node => {
   //parent checks work on the same level as the node so it is not possible for parents or dependencies
@@ -74,75 +74,93 @@ const readDependenciesFromProject = project => {
   });
 };
 
-const fetchParent = (project, findParent) => {
-  const emptyPromise = new Promise(resolve => resolve(undefined));
+const fetchParent = (project, configuration) => {
   if ( !project.parent || !project.parent[0] || !project.repositories || !project.repositories[0] ) {
     return emptyPromise;
   }
 
-  var parentCoordinates = getCoordinatesFromNode(project.parent[0]);
-  var parentGroupId = parentCoordinates.groupId.replace(/[.]/g, "/");
-
-  if (findParent != undefined) {
-    return parsePOMFromString(
-      findParent(
-        parentGroupId,
-        parentCoordinates.artifactId,
-        parentCoordinates.version,
-        project.repositories[0].repository
-      ),
-      findParent
-    );
+  const parentInformation = {
+    artifactCoordinates: getCoordinatesFromNode(project.parent[0]),
+    repositories: project.repositories[0].repository
   }
 
-  fetchParentPromise = defaultFetch(
-    parentGroupId,
-    parentCoordinates.artifactId,
-    parentCoordinates.version,
-    project.repositories[0].repository
-  );
-  return fetchParentPromise
-    .then(function(response) {
-      return parsePOMFromString(response);
-    })
-    .catch(function(error) {
-      return emptyPromise; //so many emotions
-    });
+  return configuration.findParent(parentInformation)
+  .then(results => {
+    return parsePOMFromString(results, configuration)
+  })
+  .catch(error => {
+    return emptyPromise;
+  });
 };
 
-const defaultFetch = (groupId, artifactId, version, repository) => {
-  const emptyPromise = new Promise(resolve => resolve(undefined));
-  var urls = [];
-  var thePromises = [];
+const defaultFetch = (information) => {
+  const urls = assembleUrls(information);
+  const requestPromises = repositoryRequests(urls);
 
-  for (let i = 0; i < repository.length; i++) {
-    baseRepo = repository[i].url;
+  return Promise.all(requestPromises)
+    .then(promiseResults =>
+    promiseResults.filter(artifactRetrievalPromise => artifactRetrievalPromise != undefined))
+      .then(validPromise => {
+        if(validPromise.length > 0){
+          return validPromise[0];
+        }
+      });
+};
+
+const assembleUrls = (information) => { 
+  const coordinates = information.artifactCoordinates;
+  const groupId = coordinates.groupId.split('.').join('/');
+  const urls = [];
+
+  for (let i = 0; i < information.repositories.length; i++) {
+    let baseRepo = information.repositories[i].url[0];
     urls.push(
-      `${baseRepo}/${groupId}/${artifactId}/${version}/${artifactId}-${version}.pom`
+      `${baseRepo}/${groupId}/${coordinates.artifactId}/${coordinates.version}/${coordinates.artifactId}-${coordinates.version}.pom`
     );
   }
+  return urls;
+};
+
+const repositoryRequests = (urls) => {
+  const getPromises = []; 
 
   for (let i = 0; i < urls.length; i++) {
-    thePromises.push(
+    getPromises.push(
       axios.get(urls[i])
         .then(response => response.data)
-        .catch(function(error) {
-          if (error.response.status > 399 && error.response.status < 500)
-            return emptyPromise;
-          else throw error;
+        .catch(error => {
+          if (error.response.status > 399 && error.response.status < 500) {
+            return emptyPromise; }
+          else {
+            throw new error;
+          }
         })
     );
   }
-  return Promise.all(thePromises)
-    .then(promiseResults =>
-      promiseResults.filter(tooManyPromises => tooManyPromises != undefined)
-    )
-    .then(notAsManyPromises => notAsManyPromises[0]);
+  return getPromises;
 };
 
-const buildJSONStructure = (project, findParent) => {
+const createConfigurationObject = (configuration) => {
+  const defaultConfiguration = {
+    findParent: defaultFetch
+  };
+  let completeConfiguration = {};
+
+  if (configuration) {
+    for(let key in defaultConfiguration) {
+      completeConfiguration[key] = configuration[key] ? configuration[key] : defaultConfiguration[key];
+    }
+  }
+  else {
+    completeConfiguration = defaultConfiguration;
+  }
+  return completeConfiguration;
+};
+
+const buildJSONStructure = (project, configuration) => {
   let parentCoordinates = undefined;
-  const parentPOMPromise = fetchParent(project, findParent);
+  const parentPOMPromise = fetchParent(project, configuration);
+
   if (project.parent && project.parent[0]) {
     parentCoordinates = getCoordinatesFromNode(project.parent[0]);
   }
@@ -158,14 +176,14 @@ const buildJSONStructure = (project, findParent) => {
   });
 };
 
-const parsePOMFromString = (pomContents, findParent) => {
+const parsePOMFromString = (pomContents, configuration) => {
   return new Promise(resolve => {
     return xml2js.parseString(pomContents, (err, result) => {
       resolve(result);
     });
   })
     .then(result => result.project)
-    .then(data => buildJSONStructure(data, findParent));
+    .then(data => buildJSONStructure(data, createConfigurationObject(configuration)));
 };
 
 module.exports = { parsePOMFromString };
