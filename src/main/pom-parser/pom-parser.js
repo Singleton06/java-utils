@@ -1,7 +1,16 @@
 const xml2js = require("xml2js");
 const axios = require("axios");
+const Repository = require("./Repository").constructor;
 const emptyPromise = new Promise(resolve => resolve(undefined));
 
+/**
+ * Pull the available coordinates from any node passed in
+ * If the node does not contain groupId or version the parent of the node is checked for missing information
+ * This function is referenced within getCoordinatesFromNode, readDependenciesFromProject, fetchParent, buildJSONStructure
+ *
+ * @param    {Object}   node - an object that contains all the data from the pom file
+ * @returns  {{groupId: any, artifactId: undefined, version: undefined}}
+ */
 const getCoordinatesFromNode = node => {
   //parent checks work on the same level as the node so it is not possible for parents or dependencies
   const groupId = node.groupId ? node.groupId[0] : node.parent ? getCoordinatesFromNode(node.parent[0]).groupId : undefined;
@@ -15,6 +24,13 @@ const getCoordinatesFromNode = node => {
   };
 };
 
+/**
+ * Retrieves information from releases and snapshots within a repository
+ * This function is referenced within readRepositoriesFromProject
+ *
+ * @param    {Object}   release   contains the release or snapshot
+ * @returns {{enabled, updatePolicy, checksumPolicy}}
+ */
 const getRepositoryPolicy = release => {
   const enabled = release.enabled ? release.enabled[0] : undefined;
   const updatePolicy = release.updatePolicy ? release.updatePolicy[0] : undefined;
@@ -27,6 +43,13 @@ const getRepositoryPolicy = release => {
   };
 };
 
+/**
+ * Reads repositories from the project and creates repository objects for each repository
+ * This function is referenced in buildJSONStructure
+ *
+ * @param   {Object}  project  contains all the data from the pom file
+ * @returns {Array}   of Repository objects, or empty if there are no repositories
+ */
 const readRepositoriesFromProject = project => {
   if ( !project.repositories || !project.repositories[0] || !project.repositories[0].repository ) {
     return [];
@@ -48,17 +71,24 @@ const readRepositoriesFromProject = project => {
       snapshots = getRepositoryPolicy(repository.snapshots[0]);
     }
 
-    return {
+    return new Repository({
       id,
       url,
       name,
       layout,
       releases,
       snapshots
-    };
+    });
   });
 };
 
+/**
+ * Well... it reads dependencies from the project...
+ * This function is referenced in buildJSONStructure
+ *
+ * @param   {Object}    project
+ * @returns {Array}     array of objects containing coordinates and scope, or empty if there are no dependencies
+ */
 const readDependenciesFromProject = project => {
   if ( !project.dependencies || !project.dependencies[0] || !project.dependencies[0].dependency ) {
     return [];
@@ -68,12 +98,20 @@ const readDependenciesFromProject = project => {
     const scope = dependency.scope ? dependency.scope[0] : undefined;
     
     return {
-      ...getCoordinatesFromNode(dependency),
-      scope
+        ...getCoordinatesFromNode(dependency),
+        scope
     };
   });
 };
 
+/**
+ * Creates an object containing parent information and calls the function
+ * This function is referenced in buildJSONStructure
+ *
+ * @param project
+ * @param configuration
+ * @returns {Promise}
+ */
 const fetchParent = (project, configuration) => {
   if ( !project.parent || !project.parent[0] || !project.repositories || !project.repositories[0] ) {
     return emptyPromise;
@@ -81,7 +119,7 @@ const fetchParent = (project, configuration) => {
 
   const parentInformation = {
     artifactCoordinates: getCoordinatesFromNode(project.parent[0]),
-    repositories: project.repositories[0].repository
+    repositories: readRepositoriesFromProject(project) //project.repositories[0].repository
   }
 
   return configuration.findParent(parentInformation)
@@ -93,13 +131,19 @@ const fetchParent = (project, configuration) => {
   });
 };
 
+/**
+ *
+ * This function is referenced in createConfigurationObject
+ * @param information
+ * @returns {Promise<any[]>}
+ */
 const defaultFetch = (information) => {
   const urls = assembleUrls(information);
   const requestPromises = repositoryRequests(urls);
 
   return Promise.all(requestPromises)
     .then(promiseResults =>
-    promiseResults.filter(artifactRetrievalPromise => artifactRetrievalPromise != undefined))
+    promiseResults.filter(artifactRetrievalPromise => artifactRetrievalPromise !== undefined))
       .then(validPromise => {
         if(validPromise.length > 0){
           return validPromise[0];
@@ -107,13 +151,19 @@ const defaultFetch = (information) => {
       });
 };
 
+/**
+ *
+ * This function is referenced in defaultFetch
+ * @param information
+ * @returns {Array} urls
+ */
 const assembleUrls = (information) => { 
   const coordinates = information.artifactCoordinates;
   const groupId = coordinates.groupId.split('.').join('/');
   const urls = [];
 
   for (let i = 0; i < information.repositories.length; i++) {
-    let baseRepo = information.repositories[i].url[0];
+    let baseRepo = information.repositories[i].url;
     urls.push(
       `${baseRepo}/${groupId}/${coordinates.artifactId}/${coordinates.version}/${coordinates.artifactId}-${coordinates.version}.pom`
     );
@@ -121,6 +171,12 @@ const assembleUrls = (information) => {
   return urls;
 };
 
+/**
+ *
+ * This function is referenced in defaultFetch
+ * @param urls
+ * @returns {Array}
+ */
 const repositoryRequests = (urls) => {
   const getPromises = []; 
 
@@ -140,23 +196,28 @@ const repositoryRequests = (urls) => {
   return getPromises;
 };
 
+/**
+ *
+ * This function is referenced in parsePOMFromString
+ * @param configuration
+ * @returns {{findParent: (function(*=): Promise<any[]>)}}
+ */
 const createConfigurationObject = (configuration) => {
   const defaultConfiguration = {
     findParent: defaultFetch
   };
-  let completeConfiguration = {};
+  const completeConfiguration = {...defaultConfiguration, ...configuration};
 
-  if (configuration) {
-    for(let key in defaultConfiguration) {
-      completeConfiguration[key] = configuration[key] ? configuration[key] : defaultConfiguration[key];
-    }
-  }
-  else {
-    completeConfiguration = defaultConfiguration;
-  }
   return completeConfiguration;
 };
 
+/**
+ *
+ * This function is referenced in parsePOMFromString
+ * @param project
+ * @param configuration
+ * @returns {PromiseLike<{groupId: any, artifactId: undefined, version: undefined, parent: undefined, dependencies: *, repositories: *, parentPom: T}> | Promise<{groupId: any, artifactId: undefined, version: undefined, parent: undefined, dependencies: *, repositories: *, parentPom: T}>}
+ */
 const buildJSONStructure = (project, configuration) => {
   let parentCoordinates = undefined;
   const parentPOMPromise = fetchParent(project, configuration);
@@ -175,7 +236,13 @@ const buildJSONStructure = (project, configuration) => {
     };
   });
 };
-
+/**
+ *
+ * This function is public and referenced in fetchParent
+ * @param pomContents
+ * @param configuration
+ * @returns {Promise<{groupId, artifactId: undefined, version: undefined, parent: undefined, dependencies: *, repositories: *, parentPom: T}>}
+ */
 const parsePOMFromString = (pomContents, configuration) => {
   return new Promise(resolve => {
     return xml2js.parseString(pomContents, (err, result) => {
