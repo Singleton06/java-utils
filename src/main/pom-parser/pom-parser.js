@@ -1,6 +1,6 @@
 const xml2js = require("xml2js");
 const axios = require("axios");
-const Repository = require("./Repository").constructor;
+const { Repository, RepositoryPolicy } = require("./models");
 const emptyPromise = new Promise(resolve => resolve(undefined));
 
 /**
@@ -25,22 +25,23 @@ const getCoordinatesFromNode = node => {
 };
 
 /**
- * Retrieves information from releases and snapshots within a repository
- * This function is referenced within readRepositoriesFromProject
+ * Retrieves information from releases and snapshots within a Repository node.
  *
- * @param    {Object}   release   contains the release or snapshot
- * @returns {{enabled, updatePolicy, checksumPolicy}}
+ * @param {Object} policy
+ *      Contains the xml node for the repository policy.  This will generally be the repository release or snapshot xml
+ *      node.
+ * @returns {RepositoryPolicy} the translated {@link RepositoryPolicy} for the provided xml node.
  */
-const getRepositoryPolicy = release => {
-  const enabled = release.enabled ? release.enabled[0] : undefined;
-  const updatePolicy = release.updatePolicy ? release.updatePolicy[0] : undefined;
-  const checksumPolicy = release.checksumPolicy ? release.checksumPolicy[0] : undefined;
+const getRepositoryPolicy = policy => {
+  const enabled = policy.enabled ? policy.enabled[0] : undefined;
+  const updatePolicy = policy.updatePolicy ? policy.updatePolicy[0] : undefined;
+  const checksumPolicy = policy.checksumPolicy ? policy.checksumPolicy[0] : undefined;
 
-  return {
+  return new RepositoryPolicy({
     enabled,
     updatePolicy,
     checksumPolicy
-  };
+  });
 };
 
 /**
@@ -83,11 +84,12 @@ const readRepositoriesFromProject = project => {
 };
 
 /**
- * Well... it reads dependencies from the project...
- * This function is referenced in buildJSONStructure
+ * Reads the dependencies from the project.
  *
- * @param   {Object}    project
- * @returns {Array}     array of objects containing coordinates and scope, or empty if there are no dependencies
+ * @param {Object} project
+ *      The high level project xml.  This will be used to pull information off for the dependencies.
+ *
+ * @returns {Array} the array of objects containing coordinates and scope, or empty if there are no dependencies
  */
 const readDependenciesFromProject = project => {
   if ( !project.dependencies || !project.dependencies[0] || !project.dependencies[0].dependency ) {
