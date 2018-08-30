@@ -15,7 +15,6 @@
  * @author Dustin Singleton
  */
 class RepositoryPolicy {
-
   /**
    * Constructs a new instance of the RepositoryPolicy object.
    *

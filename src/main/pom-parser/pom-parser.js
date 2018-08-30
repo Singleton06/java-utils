@@ -1,7 +1,7 @@
-const xml2js = require("xml2js");
-const axios = require("axios");
-const { Repository, RepositoryPolicy, Parent, Dependency } = require("./models");
-const emptyPromise = new Promise(resolve => resolve(undefined));
+const xml2js = require('xml2js');
+const axios = require('axios');
+const { Repository, RepositoryPolicy, Parent, Dependency } = require('./models');
+const emptyPromise = new Promise((resolve) => resolve(undefined));
 
 /**
  * Pull the available coordinates from any node passed in
@@ -11,16 +11,24 @@ const emptyPromise = new Promise(resolve => resolve(undefined));
  * @param    {Object}   node - an object that contains all the data from the pom file
  * @returns  {{groupId: any, artifactId: undefined, version: undefined}}
  */
-const getCoordinatesFromNode = node => {
+const getCoordinatesFromNode = (node) => {
   //parent checks work on the same level as the node so it is not possible for parents or dependencies
-  const groupId = node.groupId ? node.groupId[0] : node.parent ? getCoordinatesFromNode(node.parent[0]).groupId : undefined;
+  const groupId = node.groupId
+    ? node.groupId[0]
+    : node.parent
+      ? getCoordinatesFromNode(node.parent[0]).groupId
+      : undefined;
   const artifactId = node.artifactId ? node.artifactId[0] : undefined;
-  const version = node.version ? node.version[0] : node.parent ? getCoordinatesFromNode(node.parent[0]).version : undefined;
+  const version = node.version
+    ? node.version[0]
+    : node.parent
+      ? getCoordinatesFromNode(node.parent[0]).version
+      : undefined;
 
   return {
     groupId,
     artifactId,
-    version
+    version,
   };
 };
 
@@ -32,7 +40,7 @@ const getCoordinatesFromNode = node => {
  *      node.
  * @returns {RepositoryPolicy} the translated {@link RepositoryPolicy} for the provided xml node.
  */
-const getRepositoryPolicy = policy => {
+const getRepositoryPolicy = (policy) => {
   const enabled = policy.enabled ? policy.enabled[0] : undefined;
   const updatePolicy = policy.updatePolicy ? policy.updatePolicy[0] : undefined;
   const checksumPolicy = policy.checksumPolicy ? policy.checksumPolicy[0] : undefined;
@@ -40,7 +48,7 @@ const getRepositoryPolicy = policy => {
   return new RepositoryPolicy({
     enabled,
     updatePolicy,
-    checksumPolicy
+    checksumPolicy,
   });
 };
 
@@ -52,12 +60,12 @@ const getRepositoryPolicy = policy => {
  *    The pom project content as read through xml2js.
  * @returns {Repository[]} an array of {@link Repository} objects, or empty if there are no repositories.
  */
-const readRepositoriesFromProject = project => {
-  if ( !project.repositories || !project.repositories[0] || !project.repositories[0].repository ) {
+const readRepositoriesFromProject = (project) => {
+  if (!project.repositories || !project.repositories[0] || !project.repositories[0].repository) {
     return [];
   }
 
-  return project.repositories[0].repository.map(repository => {
+  return project.repositories[0].repository.map((repository) => {
     const id = repository.id ? repository.id[0] : undefined;
     const url = repository.url ? repository.url[0] : undefined;
     const name = repository.name ? repository.name[0] : undefined;
@@ -79,7 +87,7 @@ const readRepositoriesFromProject = project => {
       name,
       layout,
       releases,
-      snapshots
+      snapshots,
     });
   });
 };
@@ -87,38 +95,39 @@ const readRepositoriesFromProject = project => {
 /**
  * @returns {Dependency[]} the array of objects containing coordinates and scope, or empty if there are no dependencies
  */
-const readDependenciesFromProject = project => {
-  if ( !project.dependencies || !project.dependencies[0] || !project.dependencies[0].dependency ) {
+const readDependenciesFromProject = (project) => {
+  if (!project.dependencies || !project.dependencies[0] || !project.dependencies[0].dependency) {
     return [];
   }
 
-  return project.dependencies[0].dependency.map(dependency => {
+  return project.dependencies[0].dependency.map((dependency) => {
     const scope = dependency.scope ? dependency.scope[0] : undefined;
-    
+
     return new Dependency({
-        ...getCoordinatesFromNode(dependency),
-        scope
+      ...getCoordinatesFromNode(dependency),
+      scope,
     });
   });
 };
 
 const fetchParent = (project, configuration) => {
-  if ( !project.parent || !project.parent[0] || !project.repositories || !project.repositories[0] ) {
+  if (!project.parent || !project.parent[0] || !project.repositories || !project.repositories[0]) {
     return emptyPromise;
   }
 
   const parentInformation = {
     artifactCoordinates: getCoordinatesFromNode(project.parent[0]),
-    repositories: readRepositoriesFromProject(project) //project.repositories[0].repository
-  }
+    repositories: readRepositoriesFromProject(project), //project.repositories[0].repository
+  };
 
-  return configuration.findParent(parentInformation)
-  .then(results => {
-    return parsePOMFromString(results, configuration)
-  })
-  .catch(error => {
-    return emptyPromise;
-  });
+  return configuration
+    .findParent(parentInformation)
+    .then((results) => {
+      return parsePOMFromString(results, configuration);
+    })
+    .catch((error) => {
+      return emptyPromise;
+    });
 };
 
 const defaultFetch = (information) => {
@@ -126,13 +135,14 @@ const defaultFetch = (information) => {
   const requestPromises = repositoryRequests(urls);
 
   return Promise.all(requestPromises)
-    .then(promiseResults =>
-    promiseResults.filter(artifactRetrievalPromise => artifactRetrievalPromise !== undefined))
-      .then(validPromise => {
-        if(validPromise.length > 0){
-          return validPromise[0];
-        }
-      });
+    .then((promiseResults) =>
+      promiseResults.filter((artifactRetrievalPromise) => artifactRetrievalPromise !== undefined),
+    )
+    .then((validPromise) => {
+      if (validPromise.length > 0) {
+        return validPromise[0];
+      }
+    });
 };
 
 const assembleUrls = (information) => {
@@ -143,26 +153,29 @@ const assembleUrls = (information) => {
   for (let i = 0; i < information.repositories.length; i++) {
     let baseRepo = information.repositories[i].url;
     urls.push(
-      `${baseRepo}/${groupId}/${coordinates.artifactId}/${coordinates.version}/${coordinates.artifactId}-${coordinates.version}.pom`
+      `${baseRepo}/${groupId}/${coordinates.artifactId}/${coordinates.version}/${coordinates.artifactId}-${
+        coordinates.version
+      }.pom`,
     );
   }
   return urls;
 };
 
 const repositoryRequests = (urls) => {
-  const getPromises = []; 
+  const getPromises = [];
 
   for (let i = 0; i < urls.length; i++) {
     getPromises.push(
-      axios.get(urls[i])
-        .then(response => response.data)
-        .catch(error => {
+      axios
+        .get(urls[i])
+        .then((response) => response.data)
+        .catch((error) => {
           if (error.response.status > 399 && error.response.status < 500) {
-            return emptyPromise; }
-          else {
-            throw new error;
+            return emptyPromise;
+          } else {
+            throw new error();
           }
-        })
+        }),
     );
   }
   return getPromises;
@@ -176,19 +189,15 @@ const repositoryRequests = (urls) => {
  */
 const createConfigurationObject = (configuration) => {
   const defaultConfiguration = {
-    findParent: defaultFetch
+    findParent: defaultFetch,
   };
 
-  return {...defaultConfiguration, ...configuration};
+  return {
+    ...defaultConfiguration,
+    ...configuration,
+  };
 };
 
-/**
- *
- * This function is referenced in parsePOMFromString
- * @param project
- * @param configuration
- * @returns {PromiseLike<{groupId: any, artifactId: undefined, version: undefined, parent: undefined, dependencies: *, repositories: *, parentPom: T}> | Promise<{groupId: any, artifactId: undefined, version: undefined, parent: undefined, dependencies: *, repositories: *, parentPom: T}>}
- */
 const buildJSONStructure = (project, configuration) => {
   let parentCoordinates = undefined;
   const parentPOMPromise = fetchParent(project, configuration);
@@ -197,13 +206,13 @@ const buildJSONStructure = (project, configuration) => {
     parentCoordinates = new Parent(getCoordinatesFromNode(project.parent[0]));
   }
 
-  return parentPOMPromise.then(parentPOM => {
+  return parentPOMPromise.then((parentPOM) => {
     return {
       ...getCoordinatesFromNode(project),
       parent: parentCoordinates,
       dependencies: readDependenciesFromProject(project),
       repositories: readRepositoriesFromProject(project),
-      parentPom: parentPOM
+      parentPom: parentPOM,
     };
   });
 };
@@ -215,13 +224,13 @@ const buildJSONStructure = (project, configuration) => {
  * @returns {Promise<{groupId, artifactId: undefined, version: undefined, parent: undefined, dependencies: *, repositories: *, parentPom: T}>}
  */
 const parsePOMFromString = (pomContents, configuration) => {
-  return new Promise(resolve => {
+  return new Promise((resolve) => {
     return xml2js.parseString(pomContents, (err, result) => {
       resolve(result);
     });
   })
-    .then(result => result.project)
-    .then(data => buildJSONStructure(data, createConfigurationObject(configuration)));
+    .then((result) => result.project)
+    .then((data) => buildJSONStructure(data, createConfigurationObject(configuration)));
 };
 
 module.exports = { parsePOMFromString };

@@ -1,4 +1,4 @@
-const RepositoryPolicy = require('../models');
+const RepositoryPolicy = require("../models");
 
 /**
  * A repository contains the information needed for establishing connections with remote repository.
@@ -18,11 +18,10 @@ const RepositoryPolicy = require('../models');
  *    How to handle downloading of releases from this repository.
  * @property {RepositoryPolicy} snapshots
  *    How to handle downloading of snapshots from this repository.
- * 
+ *
  * @author Dustin Singleton
  */
 class Repository {
-
   /**
    * Constructor for creating repository objects.
    *
@@ -45,7 +44,7 @@ class Repository {
    * @param {RepositoryPolicy} repository.snapshots
    *    How to handle downloading of snapshots from this repository.
    */
-  constructor (repository){
+  constructor(repository) {
     this.id = repository.id;
     this.url = repository.url;
     this.name = repository.name;
