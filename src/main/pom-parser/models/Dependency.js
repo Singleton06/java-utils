@@ -112,4 +112,6 @@ class Dependency {
   }
 };
 
-module.exports = Dependency;
+module.exports = {
+  Dependency
+};

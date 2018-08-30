@@ -1,6 +1,6 @@
 const xml2js = require("xml2js");
 const axios = require("axios");
-const { Repository, RepositoryPolicy } = require("./models");
+const { Repository, RepositoryPolicy, Parent, Dependency } = require("./models");
 const emptyPromise = new Promise(resolve => resolve(undefined));
 
 /**
@@ -48,8 +48,9 @@ const getRepositoryPolicy = policy => {
  * Reads repositories from the project and creates repository objects for each repository
  * This function is referenced in buildJSONStructure
  *
- * @param   {Object}  project  contains all the data from the pom file
- * @returns {Array}   of Repository objects, or empty if there are no repositories
+ * @param   {Object}  project
+ *    The pom project content as read through xml2js.
+ * @returns {Repository[]} an array of {@link Repository} objects, or empty if there are no repositories.
  */
 const readRepositoriesFromProject = project => {
   if ( !project.repositories || !project.repositories[0] || !project.repositories[0].repository ) {
@@ -84,12 +85,7 @@ const readRepositoriesFromProject = project => {
 };
 
 /**
- * Reads the dependencies from the project.
- *
- * @param {Object} project
- *      The high level project xml.  This will be used to pull information off for the dependencies.
- *
- * @returns {Array} the array of objects containing coordinates and scope, or empty if there are no dependencies
+ * @returns {Dependency[]} the array of objects containing coordinates and scope, or empty if there are no dependencies
  */
 const readDependenciesFromProject = project => {
   if ( !project.dependencies || !project.dependencies[0] || !project.dependencies[0].dependency ) {
@@ -99,21 +95,13 @@ const readDependenciesFromProject = project => {
   return project.dependencies[0].dependency.map(dependency => {
     const scope = dependency.scope ? dependency.scope[0] : undefined;
     
-    return {
+    return new Dependency({
         ...getCoordinatesFromNode(dependency),
         scope
-    };
+    });
   });
 };
 
-/**
- * Creates an object containing parent information and calls the function
- * This function is referenced in buildJSONStructure
- *
- * @param project
- * @param configuration
- * @returns {Promise}
- */
 const fetchParent = (project, configuration) => {
   if ( !project.parent || !project.parent[0] || !project.repositories || !project.repositories[0] ) {
     return emptyPromise;
@@ -133,12 +121,6 @@ const fetchParent = (project, configuration) => {
   });
 };
 
-/**
- *
- * This function is referenced in createConfigurationObject
- * @param information
- * @returns {Promise<any[]>}
- */
 const defaultFetch = (information) => {
   const urls = assembleUrls(information);
   const requestPromises = repositoryRequests(urls);
@@ -153,13 +135,7 @@ const defaultFetch = (information) => {
       });
 };
 
-/**
- *
- * This function is referenced in defaultFetch
- * @param information
- * @returns {Array} urls
- */
-const assembleUrls = (information) => { 
+const assembleUrls = (information) => {
   const coordinates = information.artifactCoordinates;
   const groupId = coordinates.groupId.split('.').join('/');
   const urls = [];
@@ -173,12 +149,6 @@ const assembleUrls = (information) => {
   return urls;
 };
 
-/**
- *
- * This function is referenced in defaultFetch
- * @param urls
- * @returns {Array}
- */
 const repositoryRequests = (urls) => {
   const getPromises = []; 
 
@@ -208,9 +178,8 @@ const createConfigurationObject = (configuration) => {
   const defaultConfiguration = {
     findParent: defaultFetch
   };
-  const completeConfiguration = {...defaultConfiguration, ...configuration};
 
-  return completeConfiguration;
+  return {...defaultConfiguration, ...configuration};
 };
 
 /**
@@ -225,7 +194,7 @@ const buildJSONStructure = (project, configuration) => {
   const parentPOMPromise = fetchParent(project, configuration);
 
   if (project.parent && project.parent[0]) {
-    parentCoordinates = getCoordinatesFromNode(project.parent[0]);
+    parentCoordinates = new Parent(getCoordinatesFromNode(project.parent[0]));
   }
 
   return parentPOMPromise.then(parentPOM => {

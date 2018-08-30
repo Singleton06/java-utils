@@ -12,7 +12,6 @@
  *    What to do when verification of an artifact checksum fails. Valid values are <code>ignore</code> ,
  *    <code>fail</code> or <code>warn</code> (the default).
  *
- *
  * @author Dustin Singleton
  */
 class RepositoryPolicy {
