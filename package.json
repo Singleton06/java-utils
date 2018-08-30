@@ -6,7 +6,8 @@
   "scripts": {
     "test": "nyc mocha src/**/*.test.js",
     "test:watch": "mocha src/**/*.test.js -w",
-    "coverage": "nyc report --reporter=text-lcov | coveralls"
+    "coverage": "nyc report --reporter=text-lcov | coveralls",
+    "format": "prettier src/**/*.js --write"
   },
   "repository": {
     "type": "git",
@@ -34,6 +35,7 @@
   "devDependencies": {
     "coveralls": "^3.0.1",
     "mocha": "^5.2.0",
-    "nyc": "^12.0.2"
+    "nyc": "^12.0.2",
+    "prettier": "^1.14.2"
   }
 }

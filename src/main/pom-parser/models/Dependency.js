@@ -44,11 +44,10 @@
  *      taken into account for dependency calculation if the library is used elsewhere, it will not be passed on
  *      transitively. Note: While the type of this field is <code>String</code> for technical reasons, the semantic
  *      type is actually <code>Boolean</code>.
- * 
+ *
  * @author Dustin Singleton
  */
 class Dependency {
-
   /**
    * Constructs a new instance of a dependency for the project.
    *
@@ -110,7 +109,7 @@ class Dependency {
     this.exclusions = dependency.exclusions;
     this.optional = dependency.optional;
   }
-};
+}
 
 module.exports = {
   Dependency
