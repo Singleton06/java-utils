@@ -1,6 +1,6 @@
 const xml2js = require("xml2js");
 const axios = require("axios");
-const Repository = require("./Repository").constructor;
+const { Repository, RepositoryPolicy, Parent, Dependency } = require("./models");
 const emptyPromise = new Promise(resolve => resolve(undefined));
 
 /**
@@ -25,30 +25,32 @@ const getCoordinatesFromNode = node => {
 };
 
 /**
- * Retrieves information from releases and snapshots within a repository
- * This function is referenced within readRepositoriesFromProject
+ * Retrieves information from releases and snapshots within a Repository node.
  *
- * @param    {Object}   release   contains the release or snapshot
- * @returns {{enabled, updatePolicy, checksumPolicy}}
+ * @param {Object} policy
+ *      Contains the xml node for the repository policy.  This will generally be the repository release or snapshot xml
+ *      node.
+ * @returns {RepositoryPolicy} the translated {@link RepositoryPolicy} for the provided xml node.
  */
-const getRepositoryPolicy = release => {
-  const enabled = release.enabled ? release.enabled[0] : undefined;
-  const updatePolicy = release.updatePolicy ? release.updatePolicy[0] : undefined;
-  const checksumPolicy = release.checksumPolicy ? release.checksumPolicy[0] : undefined;
+const getRepositoryPolicy = policy => {
+  const enabled = policy.enabled ? policy.enabled[0] : undefined;
+  const updatePolicy = policy.updatePolicy ? policy.updatePolicy[0] : undefined;
+  const checksumPolicy = policy.checksumPolicy ? policy.checksumPolicy[0] : undefined;
 
-  return {
+  return new RepositoryPolicy({
     enabled,
     updatePolicy,
     checksumPolicy
-  };
+  });
 };
 
 /**
  * Reads repositories from the project and creates repository objects for each repository
  * This function is referenced in buildJSONStructure
  *
- * @param   {Object}  project  contains all the data from the pom file
- * @returns {Array}   of Repository objects, or empty if there are no repositories
+ * @param   {Object}  project
+ *    The pom project content as read through xml2js.
+ * @returns {Repository[]} an array of {@link Repository} objects, or empty if there are no repositories.
  */
 const readRepositoriesFromProject = project => {
   if ( !project.repositories || !project.repositories[0] || !project.repositories[0].repository ) {
@@ -83,11 +85,7 @@ const readRepositoriesFromProject = project => {
 };
 
 /**
- * Well... it reads dependencies from the project...
- * This function is referenced in buildJSONStructure
- *
- * @param   {Object}    project
- * @returns {Array}     array of objects containing coordinates and scope, or empty if there are no dependencies
+ * @returns {Dependency[]} the array of objects containing coordinates and scope, or empty if there are no dependencies
  */
 const readDependenciesFromProject = project => {
   if ( !project.dependencies || !project.dependencies[0] || !project.dependencies[0].dependency ) {
@@ -97,21 +95,13 @@ const readDependenciesFromProject = project => {
   return project.dependencies[0].dependency.map(dependency => {
     const scope = dependency.scope ? dependency.scope[0] : undefined;
     
-    return {
+    return new Dependency({
         ...getCoordinatesFromNode(dependency),
         scope
-    };
+    });
   });
 };
 
-/**
- * Creates an object containing parent information and calls the function
- * This function is referenced in buildJSONStructure
- *
- * @param project
- * @param configuration
- * @returns {Promise}
- */
 const fetchParent = (project, configuration) => {
   if ( !project.parent || !project.parent[0] || !project.repositories || !project.repositories[0] ) {
     return emptyPromise;
@@ -131,12 +121,6 @@ const fetchParent = (project, configuration) => {
   });
 };
 
-/**
- *
- * This function is referenced in createConfigurationObject
- * @param information
- * @returns {Promise<any[]>}
- */
 const defaultFetch = (information) => {
   const urls = assembleUrls(information);
   const requestPromises = repositoryRequests(urls);
@@ -151,13 +135,7 @@ const defaultFetch = (information) => {
       });
 };
 
-/**
- *
- * This function is referenced in defaultFetch
- * @param information
- * @returns {Array} urls
- */
-const assembleUrls = (information) => { 
+const assembleUrls = (information) => {
   const coordinates = information.artifactCoordinates;
   const groupId = coordinates.groupId.split('.').join('/');
   const urls = [];
@@ -171,12 +149,6 @@ const assembleUrls = (information) => {
   return urls;
 };
 
-/**
- *
- * This function is referenced in defaultFetch
- * @param urls
- * @returns {Array}
- */
 const repositoryRequests = (urls) => {
   const getPromises = []; 
 
@@ -206,9 +178,8 @@ const createConfigurationObject = (configuration) => {
   const defaultConfiguration = {
     findParent: defaultFetch
   };
-  const completeConfiguration = {...defaultConfiguration, ...configuration};
 
-  return completeConfiguration;
+  return {...defaultConfiguration, ...configuration};
 };
 
 /**
@@ -223,7 +194,7 @@ const buildJSONStructure = (project, configuration) => {
   const parentPOMPromise = fetchParent(project, configuration);
 
   if (project.parent && project.parent[0]) {
-    parentCoordinates = getCoordinatesFromNode(project.parent[0]);
+    parentCoordinates = new Parent(getCoordinatesFromNode(project.parent[0]));
   }
 
   return parentPOMPromise.then(parentPOM => {
